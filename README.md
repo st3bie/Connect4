@@ -1,2 +1,2 @@
 # Connect4
-CNN based Connect4 Model
+Deep Q-Learning Based Connect4 Model

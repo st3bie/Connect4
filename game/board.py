@@ -1,5 +1,5 @@
 import numpy as np
-from game.game_config import ROWS, COLUMNS
+from game.GameConfig import ROWS, COLUMNS
 
 class GameBoard:
     def __init__(self):
@@ -44,3 +44,11 @@ class GameBoard:
                     return True
 
         return False
+
+    def is_board_full(self) -> bool:
+        for r in range(ROWS):
+            for c in range(COLUMNS):
+                if self.grid[r][c] == 0:
+                    return False
+                
+        return True
