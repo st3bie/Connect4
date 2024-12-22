@@ -1,180 +1,89 @@
-import pygame
-import sys
-import torch
-import os
+import numpy as np
 
-from game.Board import GameBoard
 from game.Renderer import GameRenderer
 from game.GameConfig import *
-from engine.DQN import DQN_AI
+from engine.ModelConfig import *
 
 class Connect4:
-    def __init__(self):
-        # Pygame Initialization
-        pygame.init()
-        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self.renderer = GameRenderer(self.screen)
+    def __init__(self, rows=6, cols=7):
+        self.rows = rows
+        self.cols = cols
+        self.reset()
 
-        # Board Initialization
-        self.board = GameBoard()
+    def reset(self):
+        self.board = np.zeros((self.rows, self.cols), dtype=np.float32)
+        self.current_player = 1
+        return self.get_state(1)
 
-        # Field Initialization
-        self.game_over: bool = False
-        self.turn: int = 0
+    def drop(self, player, action):
+        if not self.is_valid_action(action):
+            return self.get_state(player), -20, True
 
-        self.ai = DQN_AI()
+        row = self.get_next_open_row(action)
+        self.board[row, action] = player
 
-        # Load pre-trained model if available
-        if os.path.exists("dqn_model.pth"):
-            self.ai.load_model("dqn_model.pth")
-            print("Model loaded successfully.")
+        if self.check_win(player):
+
+            return self.get_state(player), 10, True
+        elif np.all(self.board != 0):
+            return self.get_state(player), 0, True
+
+        self.current_player *= -1
+        return self.get_state(player), 0, False
+
+    def is_valid_action(self, col):
+        if col < 0 or col >= self.cols: return False
+        return self.board[0, col] == 0
+
+    def get_next_open_row(self, col):
+        for r in range(self.rows - 1, -1, -1):
+            if self.board[r, col] == 0:
+                return r
+        return None
+
+    def check_win(self, player):
+        for r in range(self.rows):
+            for c in range(self.cols - (3)):
+                if np.all(self.board[r, c:c+4] == player):
+                    return True
+
+        for c in range(self.cols):
+            for r in range(self.rows - (3)):
+                if np.all(self.board[r:r+4, c] == player):
+                    return True
+
+        for r in range(self.rows - (3)):
+            for c in range(self.cols - (3)):
+                if all(self.board[r+i, c+i] == player for i in range(4)):
+                    return True
+                
+        for r in range(3, self.rows):
+            for c in range(self.cols - (3)):
+                if all(self.board[r-i, c+i] == player for i in range(4)):
+                    return True
+        return False
+
+    def get_state(self, player):
+        if player == 1:
+            p1 = (self.board == 1).astype(np.float32)
+            p2  = (self.board == -1).astype(np.float32)
         else:
-            print("Model not found.")
+            flipped = self.board * -1
+            p2 = (flipped == 1).astype(np.float32)
+            p1  = (flipped == -1).astype(np.float32)
 
-    def handle_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
-
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                posx = event.pos[0]
-                col = posx // SQUARE_SIZE
-                if col is None:
-                    continue
-
-                row = self.board.get_next_row(col)
-
-                print(row, col)
-
-                if self.board.check_valid_position(row, col):
-                    piece = self.turn + 1
-                    self.board.drop_piece(row, col, piece)
-
-                    print(self.board.grid)
-
-                    if self.board.check_winner(piece):
-                        print(f"Player {piece} wins!")
-                        self.game_over = True
-
-                    self.turn = (self.turn + 1) % 2
-
-    def run(self):
-        while not self.game_over:
-            if self.turn == 0:
-                self.handle_events()
-                self.renderer.draw_board(self.board.grid)
-            else:
-                self.ai_move()
-                self.turn = (self.turn + 1) % 2
-
-            self.renderer.draw_board(self.board.grid)
-            pygame.display.update()
-            
-        self.ai.save_model("dqn_model.pth")
-        pygame.time.wait(3000)
+        return np.stack([p2, p1], axis=0)
     
-    def ai_move(self):
-        state = self.get_state()
-
-        valid_move = False
-        while not valid_move:
-            action = self.ai.select_action(state)
-            col = action.item()
-            row = self.board.get_next_row(col)
-            
-            if row is not None and self.board.check_valid_position(row, col):
-                valid_move = True
-            else:
-                # Penalize invalid moves
-                reward = -5.0
-                next_state = state
-                self.ai.store_experience(state, action, reward, next_state, True)
-                self.ai.train()
-
-        self.board.drop_piece(row, col, self.turn%2 + 1)
-        reward = self.get_reward(self.turn%2 + 1)
-
-        if self.board.check_winner(self.turn%2 + 1):
-            self.game_over = True
-        elif self.board.is_board_full():
-            self.game_over = True
-            reward = 0.0
-        
-        next_state = state
-        done = self.game_over
-        self.ai.store_experience(state, action, reward, next_state, done)
-        self.ai.train()
-    
-    def train(self, episodes: int, visualize: bool):
-        target_update_interval = 1000
-
-        for episode in range(episodes):
-            self.board = GameBoard()
-            self.game_over = False
-            self.turn = 0
-
-            #pygame.time.wait(2000)
-
-            while not self.game_over and not self.board.is_board_full():
-                state = self.get_state()
-                
-                valid_move = False
-                while not valid_move:
-                    action = self.ai.select_action(state)
-                    col = action.item()
-                    row = self.board.get_next_row(col)
-                    
-                    if row is not None and self.board.check_valid_position(row, col):
-                        valid_move = True
-                    else:
-                        # Penalize invalid moves
-                        reward = -5.0
-                        next_state = state
-                        self.ai.store_experience(state, action, reward, next_state, True)
-                        self.ai.train()
-
-                self.board.drop_piece(row, col, self.turn%2 + 1)
-                
-                reward = self.get_reward(self.turn%2 + 1)
-                next_state = self.get_state()
-                
-                if self.board.check_winner(self.turn%2 + 1):
-                    self.game_over = True
-                elif self.board.is_board_full():
-                    self.game_over = True
-                    reward = 0.0  # Draw
-
-                done = self.game_over
-                self.ai.store_experience(state, action, reward, next_state, done)
-                self.ai.train()
-
-                self.turn += 1
-
-                if done or episode % target_update_interval == 0:
-                    self.ai.update_target_network()
-
-                if visualize:
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            sys.exit()
-                    self.renderer.draw_board(self.board.grid)
-                    pygame.display.update()
-
-            print(f"Episode {episode + 1}/{episodes} completed.")
-            self.ai.print_model_status()
-
-            if episode % 100 == 0:
-                print(f"Saving model at episode {episode + 1}")
-                self.ai.save_model("dqn_model.pth")
-    
-        self.ai.save_model("dqn_model.pth")
-    
-    def get_state(self):
-        return torch.FloatTensor(self.board.grid.flatten()).to(self.ai.device)
-    
-    def get_reward(self, piece):
-        if self.board.check_winner(piece):
-            return 1.0
-        elif self.game_over:
-            return -1.0
-        return 0.0
+    def render_board(self):
+        for r in range(self.rows):
+            print("|", end="")
+            for c in range(self.cols):
+                if self.board[r, c] == 1.0:
+                    print(" X |", end="")
+                elif self.board[r, c] == -1.0:
+                    print(" O |", end="")
+                else:
+                    print("   |", end="")
+            print()
+        print("  " + "   ".join(str(c) for c in range(self.cols)))
+        print()
