@@ -1,6 +1,6 @@
 import numpy as np
 
-from game.Renderer import GameRenderer
+from game.renderer import GameRenderer
 from game.GameConfig import *
 from engine.ModelConfig import *
 

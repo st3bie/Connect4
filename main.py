@@ -158,18 +158,18 @@ def self_train(env, agent1, agent2, num_episodes):
             agent1.save_model("model1.pth")
             agent2.save_model("model2.pth")
 
-def diverse_train(env, agent1, episodes, reset_frequency=5000):
-    episode = 1
-    agent2 = DQNAgent(device=device)
+def diverse_train(env, agent1, episodes, num_agents):
 
-    while (episode < episodes):
-        if (episode%reset_frequency == 0):
-            agent2 = DQNAgent(device=device)
-            print("Changed model")
+    for i in range(num_agents):
+        agent2 = DQNAgent(device=device)
+        print("Training on agent: " + str(i))
         self_train(env, agent1, agent2, episodes)
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(torch.cuda.get_device_name(0))
+    print("Training on: " + device.type)
+
     env = Connect4()
     agent1 = DQNAgent(device=device)
     try:
@@ -184,8 +184,8 @@ if __name__ == "__main__":
         print("No pre-trained model2 found")
 
     #self_train(env, agent1, agent2, 5000)
-    human_vs_ai(env, agent1, -1)
-    #diverse_train(env, agent1, 10000)
+    #human_vs_ai(env, agent1, -1)
+    diverse_train(env, agent1, 10000, 5)
 
     agent1.save_model("model1.pth")
     agent2.save_model("model2.pth")
