@@ -117,7 +117,6 @@ class DQNAgent:
             "steps_done": self.steps_done
         }
         torch.save(checkpoint, filename)
-        print("Model saved to " + filename)
 
     def load_model(self, filename="models.pth"):
         checkpoint = torch.load(filename, map_location=self.device)
@@ -126,7 +125,6 @@ class DQNAgent:
         self.optimizer1.load_state_dict(checkpoint["optimizer1"])
         self.optimizer2.load_state_dict(checkpoint["optimizer2"])
         self.steps_done = checkpoint["steps_done"]
-        print("Model loaded from " + filename + "")
 
 class ReplayMemory:
     def __init__(self, capacity):
