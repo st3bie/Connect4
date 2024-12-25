@@ -1,3 +1,7 @@
+"""
+Model configuration file.
+"""
+
 STATE_SIZE = 6 * 7
 ACTION_SIZE = 7
 
@@ -12,4 +16,7 @@ TAU = 0.005
 LR = 1e-4
 
 MEMORY_SIZE = 10000
-EPISODES = 1000
+
+WIN_REWARD = 10.0
+TIE_REWARD = 0.0
+LOSS_REWARD = -10.0

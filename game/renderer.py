@@ -1,55 +1,53 @@
+"""
+Module for rendering the board.
+"""
 import pygame
-from game.GameConfig import *
+import pygame.gfxdraw
+from game.game_config import *
 
 class GameRenderer:
-    def __init__(self, screen):
-        self.screen = screen
+    """
+    Renders the board using pygame.
+    """
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 
-    def draw_board(self, board_grid):
+    def draw_board(self, p1_board, p2_board):
+        """
+        Draw the board in pygame window based on given states
+        """
         for c in range(COLUMNS):
             for r in range(ROWS):
-                pygame.draw.rect(
+                pygame.gfxdraw.box(
                     self.screen,
-                    FRAME_COLOR,
-                    (c * SQUARE_SIZE, r * SQUARE_SIZE + SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE),
+                    (c * SQUARE_SIZE, r * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE),
+                    FRAME_COLOR
                 )
-                pygame.draw.circle(
+                pygame.gfxdraw.filled_circle(
                     self.screen,
-                    BOARD_COLOR,
-                    (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), int(r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2)),
+                    int(c * SQUARE_SIZE + SQUARE_SIZE / 2),
+                    int(r * SQUARE_SIZE + SQUARE_SIZE / 2),
                     RADIUS,
+                    BOARD_COLOR
                 )
 
         for c in range(COLUMNS):
             for r in range(ROWS):
-                if board_grid[r][c] == 1:
-                    pygame.draw.circle(
+                if p1_board[r][c] == 1:
+                    pygame.gfxdraw.filled_circle(
                         self.screen,
-                        PLAYER1_COLOR,
-                        (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), WINDOW_HEIGHT - int(r * SQUARE_SIZE + SQUARE_SIZE / 2)),
+                        int(c * SQUARE_SIZE + SQUARE_SIZE / 2),
+                        WINDOW_HEIGHT - int(r * SQUARE_SIZE + SQUARE_SIZE / 2),
                         RADIUS,
+                        PLAYER1_COLOR
                     )
-                elif board_grid[r][c] == 2:
-                    pygame.draw.circle(
+                elif p2_board[r][c] == 1:
+                    pygame.gfxdraw.filled_circle(
                         self.screen,
-                        PLAYER2_COLOR,
-                        (int(c * SQUARE_SIZE + SQUARE_SIZE / 2), WINDOW_HEIGHT - int(r * SQUARE_SIZE + SQUARE_SIZE / 2)),
+                        int(c * SQUARE_SIZE + SQUARE_SIZE / 2),
+                        WINDOW_HEIGHT - int(r * SQUARE_SIZE + SQUARE_SIZE / 2),
                         RADIUS,
+                        PLAYER2_COLOR
                     )
-
         pygame.display.update()
-
-    def draw_hover_piece(self, col: int, turn: int):
-        if turn%2 == 1:
-            hover_color = PLAYER1_COLOR
-        else:
-            hover_color = PLAYER2_COLOR
-
-        surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
-        pygame.draw.circle(
-            surface,
-            hover_color,
-            (SQUARE_SIZE // 2, SQUARE_SIZE // 2),
-            RADIUS,
-        )
-        self.screen.blit(surface, (col * SQUARE_SIZE, 0))
