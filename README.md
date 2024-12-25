@@ -2,7 +2,7 @@
 Reinforcement learning model for Connect 4.
 
 ## Reinforcement Learning
-This project utilizes Deep Q-Learning, a reinforcement learning technique where the agent optimizes its actions by approximating the Q-value function. The AI is trained to predict the long-term reward for each possible action based on the current state of the board.
+This project utilizes Deep Q-Learning, a reinforcement learning technique where the agent optimizes its actions by approximating the Q-value function. The Deel Learning Model is trained to predict the long-term reward for each possible action based on the current state of the board.
 
 ## Model Design
 ### Layers
