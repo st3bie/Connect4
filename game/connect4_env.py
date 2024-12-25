@@ -1,7 +1,7 @@
 import numpy as np
 
-from game.TrainingConfig import *
-from game.GameConfig import ROWS, COLUMNS
+from game.training_config import *
+from game.game_config import ROWS, COLUMNS
 
 class Connect4Env:
     def __init__(self):
@@ -89,19 +89,16 @@ class Connect4Env:
         else:
             return np.stack([p2, p1], axis=0)
 
-    def render_terminal(self):
-        print("\nCurrent Board:")
-        for row in reversed(range(self.rows)):
-            print("|", end="")  # Start of the row
-            for col in range(self.cols):
-                bit = 1 << (col * 7 + row)  # Calculate the bitmask for the current cell
-                if self.p1_pos & bit:
-                    print(" X |", end="")  # Player 1's piece
-                elif self.p2_pos & bit:
-                    print(" O |", end="")  # Player 2's piece
-                else:
-                    print("   |", end="")  # Empty cell
-            print()  # Newline after each row
-        # Print the column numbers below the board
-        print("  " + "   ".join(str(c) for c in range(self.cols)))
-        print()
+    def get_board(self):
+        p1 = np.zeros((self.rows, self.cols), np.float32)
+        p2 = np.zeros((self.rows, self.cols), np.float32)
+        for col in range(self.cols):
+            for row in range(self.rows):
+                bit_pos = 1 << (col * 7 + row)
+                if self.p1_pos & bit_pos:
+                    p1[row][col] = 1
+
+                if self.p2_pos & bit_pos:
+                    p2[row][col] = 1
+
+        return p1, p2

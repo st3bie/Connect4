@@ -1,16 +1,21 @@
-import random
+"""
+This module implements a Clipped Double Deep Q-Learning model using PyTorch. 
+Includes a convolutional DQN model, DQN agent, and replay memory buffer.
+"""
 from collections import deque
-
+import math
+import random
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import math
-import numpy as np
-
-from engine.ModelConfig import *
+from engine.model_config import *
 
 class ConvDQN(nn.Module):
+    """
+    Deep Q-Network (DQN) with two convolutional layers and and two fully connected layers.
+    """
     def __init__(self, action_size):
         super(ConvDQN, self).__init__()
 
@@ -28,15 +33,27 @@ class ConvDQN(nn.Module):
         )
 
     def forward(self, x):
+        """
+        Defines the forward pass of the ConvDQN.
+
+        Args:
+            x (torch.Tensor): Input tensor of the current board state.
+        Returns:
+            torch.Tensor: Q-values for each action.
+        """
         if x.dim() == 3:
             x = x.unsqueeze(0)
 
         x = self.conv_layers(x)
         x = torch.flatten(x, start_dim=1)
-        #x = x.view(x.size(0), -1)
-        return self.fc_layers(x)
+        x = self.fc_layers(x)
+        return x
+
 
 class DQNAgent:
+    """
+    Double Deep Q-Learning agent.
+    """
     def __init__(self, device="cpu"):
         self.action_size = ACTION_SIZE
         self.gamma = GAMMA
@@ -53,6 +70,9 @@ class DQNAgent:
         self.steps_done = 0
 
     def select_action(self, state):
+        """
+        Selects an action based on the q-network using epsilon-greedy exploration.
+        """
         self.steps_done += 1
 
         epsilon = EPS_END + (EPS_START - EPS_END) * \
@@ -62,10 +82,17 @@ class DQNAgent:
             return random.randint(0, self.action_size - 1)
         else:
             with torch.no_grad():
-                state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
+                state_tensor = torch.tensor(state,
+                                            dtype=torch.float32,
+                                            device=self.device).unsqueeze(0)
                 return self.q_net1(state_tensor).argmax(dim=1).item()
-        
+
     def compute_loss(self):
+        """
+        Computes the loss for both Q-networks using the Bellman equation and sampled 
+        transitions from the replay memory. Uses Clipped Double Q-learning for loss
+        computation.
+        """
         states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
 
         states = torch.tensor(states, device=self.device)
@@ -90,13 +117,16 @@ class DQNAgent:
         loss1 = F.mse_loss(q1_current, target)
         loss2 = F.mse_loss(q2_current, target)
         return loss1, loss2
-    
+
     def optimize(self):
+        """
+        Optimization based on the computed loss for both Q-networks.
+        """
         if len(self.memory) < self.batch_size:
             return
-        
+
         loss1, loss2 = self.compute_loss()
-        
+
         self.optimizer1.zero_grad()
         loss1.backward()
         self.optimizer1.step()
@@ -104,11 +134,17 @@ class DQNAgent:
         self.optimizer2.zero_grad()
         loss2.backward()
         self.optimizer2.step()
-    
+
     def store_transition(self, state, action, reward, next_state, done):
+        """
+        Stores a transition into the replay memory for future optimizations.
+        """
         self.memory.push(state, action, reward, next_state, done)
-    
+
     def save_model(self, filename="models.pth"):
+        """
+        Saves checkpoint in a file with provided filename.
+        """
         checkpoint = {
             "q_net1": self.q_net1.state_dict(),
             "q_net2": self.q_net2.state_dict(),
@@ -119,6 +155,9 @@ class DQNAgent:
         torch.save(checkpoint, filename)
 
     def load_model(self, filename="models.pth"):
+        """
+        Loads checkpoint from the provided file.
+        """
         checkpoint = torch.load(filename, map_location=self.device)
         self.q_net1.load_state_dict(checkpoint["q_net1"])
         self.q_net2.load_state_dict(checkpoint["q_net2"])
@@ -127,15 +166,24 @@ class DQNAgent:
         self.steps_done = checkpoint["steps_done"]
 
 class ReplayMemory:
+    """
+    Replay memory is used to store previous transitions for sampling.
+    """
     def __init__(self, capacity):
         self.capacity = capacity
         self.memory = deque(maxlen=capacity)
-    
+
     def push(self, state, action, reward, next_state, done):
+        """
+        Push a transition into the memory buffer.
+        """
         transition = (state, action, reward, next_state, done)
         self.memory.append(transition)
-    
+
     def sample(self, batch_size):
+        """
+        Samples a batch of transitions from the memory.
+        """
         batch = random.sample(self.memory, batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
         return (np.array(states, dtype=np.float32),
@@ -143,6 +191,9 @@ class ReplayMemory:
                 np.array(rewards, dtype=np.float32),
                 np.array(next_states, dtype=np.float32),
                 np.array(dones, dtype=np.float32))
-    
+
     def __len__(self):
+        """
+        Returns the current size of the memory.
+        """
         return len(self.memory)

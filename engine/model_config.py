@@ -1,3 +1,7 @@
+"""
+Model configuration file.
+"""
+
 STATE_SIZE = 6 * 7
 ACTION_SIZE = 7
 
