@@ -14,5 +14,5 @@ if __name__ == "__main__":
         print("No pre-trained model1 found")
     trainer = Trainer(env, agent, device)
 
-    #trainer.self_train(20, 100000)
-    trainer.human_vs_ai(1)
+    trainer.self_play(20, 100000)
+    #trainer.human_vs_ai(1)
